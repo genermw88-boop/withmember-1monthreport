@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import urllib.request
 import re
+import random
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
@@ -46,25 +47,36 @@ def generate_structured_sections(data_dict):
     p_rank = parse_rank_num(data_dict.get('전월 순위', ''))
     c_rank = parse_rank_num(data_dict.get('당월 순위', ''))
     
+    # 1. 플레이스 순위 분석 문구 다변화 템플릿
+    rise_templates = [
+        f"• [성과 분석] 당월 플레이스 순위가 {p_rank}위에서 {c_rank}위로 대폭 상승하여 가시성이 극대화되었습니다.\n• [유지 플랜] 현재 최상위 노출세를 고착화하기 위해 유효 트래픽 유지 및 연관 키워드 지수 관리를 지속합니다.",
+        f"• [상승 요인] 최적화 블로그 유입 및 영수증 리뷰 결합 효과로 순위가 {p_rank}위 ➔ {c_rank}위로 상승하였습니다.\n• [향후 계획] 상승세를 이어나가기 위해 대표 키워드 상단 고정 트래픽 및 소통 지수를 집중 유지합니다.",
+        f"• [지표 개선] 연관 검색 태그 재정비와 유효 유입량 증가로 플레이스 순위가 {c_rank}위로 대폭 개선되었습니다.\n• [안착 전략] 현재 순위권 유지를 위해 주기적인 리뷰 반응 속도 관리와 연관 블로그 배포를 병행합니다."
+    ]
+    
+    drop_templates = [
+        f"• [현황 분석] 당월 플레이스 순위가 {p_rank}위에서 {c_rank}위로 조정됨에 따라 알고리즘 변동 정밀 점검 진행\n• [긴급 반등 플랜] 대표키워드 연관도 재정비, 유효 트래픽 유입 상향, 영수증/블로그 리뷰 집중 투입으로 1-2주 내 순위 반등 실행",
+        f"• [원인 분석] 네이버 플레이스 로직 업데이트로 인해 순위가 {p_rank}위에서 {c_rank}위로 일시 변동되었습니다.\n• [대응 전략] 순위 복구를 위해 타겟 키워드 유효 트래픽 증대 및 신규 리뷰 배포 주기를 가속화합니다.",
+        f"• [변동 점검] 경쟁업체 집계 지수 상승으로 인해 당월 순위가 {c_rank}위로 조정되었습니다.\n• [반등 실행] 최신 리뷰 세팅 및 검색 태그 최적화 수정을 거쳐 차주 내 이전 순위 회복을 목표로 집중 관리합니다."
+    ]
+    
+    maintain_templates = [
+        f"• [현황 분석] 당월 플레이스 순위가 {c_rank}위로 안정되게 유지되고 있습니다.\n• [확장 플랜] 서브 키워드 순위 동반 상승 및 최상위권 안착을 위한 트래픽 최적화를 진행합니다.",
+        f"• [안정화 평가] 로직 변동 속에서도 {c_rank}위 자리를 확고하게 지키며 안정적인 노출세를 기록 중입니다.\n• [고착화 작업] 상위 지수 유지를 위해 신규 리뷰 유입 속도 조절 및 연관 키워드 작업을 지속 실행합니다.",
+        f"• [지수 유지] 당월 순위 {c_rank}위를 유지하며 경쟁 매장 대비 안정적인 유입량을 확보하고 있습니다.\n• [점유율 확대] 메인 순위 유지와 동시에 방치된 서브 태그 키워드 검색 노출을 추가 확대합니다."
+    ]
+
     if p_rank is not None and c_rank is not None:
-        if c_rank > p_rank: # 순위 하락
-            rank_text = (
-                f"• [현황 분석] 당월 플레이스 순위가 {p_rank}위에서 {c_rank}위로 조정됨에 따라 알고리즘 변동 정밀 점검 진행\n"
-                f"• [긴급 반등 플랜] 대표키워드 연관도 재정비, 유효 트래픽 유입 상향, 영수증/블로그 리뷰 집중 투입으로 1-2주 내 순위 반등 실행"
-            )
-        elif c_rank < p_rank: # 순위 상승
-            rank_text = (
-                f"• [성과 분석] 당월 플레이스 순위가 {p_rank}위에서 {c_rank}위로 대폭 상승하여 가시성이 극대화되었습니다.\n"
-                f"• [유지 플랜] 현재 최상위 노출세를 고착화하기 위해 유효 트래픽 유지 및 연관 키워드 지수 관리를 지속합니다."
-            )
-        else: # 순위 유지
-            rank_text = (
-                f"• [현황 분석] 당월 플레이스 순위가 {c_rank}위로 안정되게 유지되고 있습니다.\n"
-                f"• [확장 플랜] 서브 키워드 순위 동반 상승 및 최상위권 안착을 위한 트래픽 최적화를 진행합니다."
-            )
+        if c_rank > p_rank: # 하락
+            rank_text = random.choice(drop_templates)
+        elif c_rank < p_rank: # 상승
+            rank_text = random.choice(rise_templates)
+        else: # 유지
+            rank_text = random.choice(maintain_templates)
     else:
         rank_text = f"• [현황 분석] 당월 플레이스 순위: (전월) {data_dict.get('전월 순위', '-')} = (당월) {data_dict.get('당월 순위', '-')}"
 
+    # 2. 대표키워드 분석 (도출 -> 선정 완료)
     keywords = data_dict.get('대표키워드', [])
     kw_str = ", ".join(keywords) if keywords else "주요 대표키워드"
     kw_text = (
@@ -72,6 +84,7 @@ def generate_structured_sections(data_dict):
         f"• [SEO 최적화 세팅] 스마트블록 연관도 강화, 플레이스 대표설명 문구 및 검색 태그 구조화 완료"
     )
 
+    # 3. 방문자 리뷰 및 답글
     v_review = data_dict.get('방문자 리뷰 수', 0)
     r_count = data_dict.get('답글 수', 0)
     review_text = (
@@ -79,17 +92,10 @@ def generate_structured_sections(data_dict):
         f"• [고객 소통] 등록된 리뷰 100% 답글 완료({r_count}건)를 통한 플레이스 최적화 지수(SEO) 상승 반영"
     )
 
-    links_count = len(data_dict.get('리뷰링크', []))
-    exp_text = (
-        f"• [콘텐츠 배포] 당월 목표 블로그 체험단 및 기자단 원고 총 {links_count}건 배포 완료\n"
-        f"• [노출 타겟팅] 핵심 타겟 키워드 연관 포스팅 집행을 통한 상권 영역 내 매장 브랜드 인지도 극대화"
-    )
-
     return {
         "rank_sec": rank_text,
         "kw_sec": kw_text,
-        "review_sec": review_text,
-        "exp_sec": exp_text
+        "review_sec": review_text
     }
 
 # --- [메인 UI] ---
@@ -130,10 +136,9 @@ with st.form("report_form"):
     
     st.subheader("💬 항목별 상세 내용 직접 수정 (선택사항)")
 
-    custom_rank_sec = st.text_area("1) 플레이스 순위 분석 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
+    custom_rank_sec = st.text_area("1) 플레이스 순위 분석 내용", placeholder="비워두시면 유형별로 매번 다른 문구가 자동 적용됩니다.", height=70)
     custom_kw_sec = st.text_area("2) 대표키워드 분석 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
     custom_review_sec = st.text_area("3) 방문자 리뷰/답글 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
-    custom_exp_sec = st.text_area("4) 체험단/기자단 보고 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
 
     submitted = st.form_submit_button("🚀 보고서 생성")
 
@@ -160,7 +165,6 @@ with st.form("report_form"):
             temp_data["rank_sec"] = custom_rank_sec.strip() if custom_rank_sec.strip() else auto_secs["rank_sec"]
             temp_data["kw_sec"] = custom_kw_sec.strip() if custom_kw_sec.strip() else auto_secs["kw_sec"]
             temp_data["review_sec"] = custom_review_sec.strip() if custom_review_sec.strip() else auto_secs["review_sec"]
-            temp_data["exp_sec"] = custom_exp_sec.strip() if custom_exp_sec.strip() else auto_secs["exp_sec"]
 
             st.session_state.report_data.append(temp_data)
             st.success(f"[{store_name}] 보고서가 성공적으로 생성되었습니다!")
@@ -182,21 +186,20 @@ def create_fitted_single_line_image(data):
     except:
         title_font = section_font = kpi_title_font = kpi_val_font = arrow_font = body_font = ImageFont.load_default()
 
-    img = Image.new("RGB", (img_width, 2200), color=(248, 250, 252))
+    img = Image.new("RGB", (img_width, 2000), color=(248, 250, 252))
     draw = ImageDraw.Draw(img)
-
-    # 안전한 카드 그리기 함수 (PIL 좌표 규격 오류 수정 완료)
-    def draw_card(x1, y1, x2, y2, bg=(255, 255, 255), border=(226, 232, 240), accent=None):
-        draw.rectangle([x1, y1, x2, y2], fill=bg, outline=border, width=1)
-        if accent:
-            draw.rectangle([x1, y1, x1 + 5, y2], fill=accent)
 
     # 1. 상단 헤더
     h_header = 90
-    draw.rectangle([0, 0, img_width, h_header], fill=(15, 23, 42))
+    draw.rectangle([(0, 0), (img_width, h_header)], fill=(15, 23, 42))
     draw.text((margin, 28), f"{data['매장명']} 월간 보고서", font=title_font, fill=(255, 255, 255))
 
     y = h_header + 25
+
+    def draw_card(x1, y1, x2, y2, bg=(255, 255, 255), border=(226, 232, 240), accent=None):
+        draw.rectangle([(x1, y1), (x2, y2)], fill=bg, outline=border, width=1)
+        if accent:
+            draw.rectangle([(x1, y1), (x1 + 5, y2)], fill=accent)
 
     # 2. 핵심 성과 지표 요약 (KPI)
     draw.text((margin, y), "핵심 성과 지표 요약", font=section_font, fill=(15, 23, 42))
@@ -228,7 +231,7 @@ def create_fitted_single_line_image(data):
             arrow_color = (100, 116, 139)
             status_tag = "유지"
 
-    # KPI 1
+    # KPI 1 (플레이스 순위)
     draw_card(margin, y, margin + card_w, y + 85, accent=rank_accent)
     draw.text((margin + 16, y + 14), f"플레이스 순위 [{status_tag}]", font=kpi_title_font, fill=(100, 116, 139))
     draw.text((margin + 16, y + 40), f"{data['전월 순위']}", font=kpi_val_font, fill=(30, 41, 59))
@@ -249,7 +252,7 @@ def create_fitted_single_line_image(data):
 
     y += 85 + 28
 
-    # 3. 본문 공통 섹션 함수
+    # 3. 본문 세부 섹션
     def render_single_line_section(title, raw_text, cur_y, accent_col=(15, 23, 42), bg_col=(255, 255, 255), border_col=(226, 232, 240)):
         draw.text((margin, cur_y), title, font=section_font, fill=(15, 23, 42))
         cur_y += 32
@@ -280,25 +283,14 @@ def create_fitted_single_line_image(data):
     # [섹션 3] 리뷰 및 답글
     y = render_single_line_section("방문자 리뷰 및 고객 답글 관리 보고", data['review_sec'], y, accent_col=(15, 23, 42))
 
-    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트 (분석 문구 + 링크 복원)
+    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트
     draw.text((margin, y), "체험단 / 기자단 배포 보고 및 리스트", font=section_font, fill=(15, 23, 42))
     y += 32
-    
-    exp_bullets = [l.strip() for l in data['exp_sec'].split('\n') if l.strip()]
     links = data['리뷰링크']
-
-    total_h = (len(exp_bullets) * 26) + (len(links) * 24 if links else 24) + 20
-    link_h = max(70, total_h)
-
+    link_h = max(60, len(links) * 24 + 18 if links else 55)
     draw_card(margin, y, img_width - margin, y + link_h, accent=(2, 132, 199))
 
     ly = y + 14
-    # 분석 문구 렌더링
-    for b in exp_bullets:
-        draw.text((margin + 18, ly), b, font=body_font, fill=(30, 41, 59))
-        ly += 26
-
-    # 링크 리스트 렌더링
     if links:
         for i, link in enumerate(links):
             draw.text((margin + 18, ly), f"{i+1}. {link}", font=body_font, fill=(2, 132, 199))
@@ -306,7 +298,7 @@ def create_fitted_single_line_image(data):
     else:
         draw.text((margin + 18, ly), "등록된 리뷰 링크가 없습니다.", font=body_font, fill=(148, 163, 184))
 
-    # 맨 밑 링크 딱 끝나는 지점에서 크롭
+    # 하단 여백 완전 크롭
     final_y = y + link_h + 15
     cropped_img = img.crop((0, 0, img_width, final_y))
 
@@ -337,36 +329,40 @@ if st.session_state.report_data:
                 )
                 
             with col2:
-                st.markdown(f"### 📱 [{data['매장명']}] 카톡 발송용 리포트 문구")
+                st.markdown(f"### 📱 [{data['매장명']}] 카톡 발송용 통합 요약 리포트")
                 
                 p_rank = parse_rank_num(data['전월 순위'])
                 c_rank = parse_rank_num(data['당월 순위'])
                 arrow_sym = "="
+                status_str = "유지"
                 if p_rank and c_rank:
                     if c_rank < p_rank:
                         arrow_sym = "▲"
+                        status_str = "상승"
                     elif c_rank > p_rank:
                         arrow_sym = "▼"
+                        status_str = "대응/점검"
                     else:
                         arrow_sym = "="
+                        status_str = "유지"
 
-                kakao_text = f"안녕하세요 대표님!\n[{data['매장명']}] 월간 마케팅 보고서 전달드립니다.\n\n"
-                
-                kakao_text += f"📊 [핵심 성과 지표 요약]\n"
-                kakao_text += f"• 플레이스 순위: {data['전월 순위']} {arrow_sym} {data['당월 순위']}\n"
-                kakao_text += f"• 당월 방문자 리뷰: {data['방문자 리뷰 수']}건\n"
-                kakao_text += f"• 고객 답글 관리: {data['답글 수']}건\n\n"
-                
-                kakao_text += f"🚨 [플레이스 순위 분석 및 대응 방안]\n{data['rank_sec']}\n\n"
-                kakao_text += f"🎯 [대표키워드 분석 및 SEO 세팅 보고]\n{data['kw_sec']}\n\n"
-                kakao_text += f"💬 [방문자 리뷰 및 고객 답글 관리 보고]\n{data['review_sec']}\n\n"
-                
-                kakao_text += f"🔗 [체험단 / 기자단 배포 보고 및 리스트]\n{data['exp_sec']}\n"
-                if data['리뷰링크']:
-                    for i, link in enumerate(data['리뷰링크']):
-                        kakao_text += f"{i+1}. {link}\n"
-                
-                kakao_text += "\n상세 내용은 첨부해 드린 보고서 이미지를 확인해 주세요. 감사합니다!"
+                # 💡 이미지 본문 반복이 아닌 깔끔한 통합 요약 형식으로 카톡 문구 전면 개편
+                kw_str = ", ".join(data['대표키워드']) if data['대표키워드'] else "주요 키워드"
+                link_count = len(data['리뷰링크'])
+
+                kakao_text = (
+                    f"안녕하세요 대표님! [{data['매장명']}] 월간 마케팅 통합 보고서 전달드립니다.\n\n"
+                    f"📌 [월간 핵심 성과 요약]\n"
+                    f"• 플레이스 순위: {data['전월 순위']} {arrow_sym} {data['당월 순위']} ({status_str})\n"
+                    f"• 당월 방문자 리뷰: {data['방문자 리뷰 수']}건 유입\n"
+                    f"• 고객 답글 관리: {data['답글 수']}건 (100% 완료)\n\n"
+                    f"📌 [주요 마케팅 집행 현황]\n"
+                    f"• 플레이스 관리: 당월 순위 분석 및 알고리즘 맞춤 트래픽/SEO 세팅 진행\n"
+                    f"• 대표키워드 최적화: ({kw_str}) 상권 분석 기반 핵심 태그 구조화 완료\n"
+                    f"• 블로그/기자단 배포: 당월 총 {link_count}건 콘텐츠 배포 진행 완료\n\n"
+                    f"📄 세부 항목별 상세 리포트 및 리뷰 배포 링크는 함께 첨부해 드린 보고서 이미지를 확인해 주세요!\n"
+                    f"궁금하신 사항은 언제든 편하게 말씀해 주세요. 감사합니다. :)"
+                )
 
                 st.text_area("카톡 전송 문구 전체 복사", value=kakao_text, height=420, key=f"kakao_txt_{idx}")
 
