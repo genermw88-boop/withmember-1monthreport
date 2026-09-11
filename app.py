@@ -67,7 +67,6 @@ def generate_structured_sections(data_dict):
 
     keywords = data_dict.get('대표키워드', [])
     kw_str = ", ".join(keywords) if keywords else "주요 대표키워드"
-    # '도출' -> '선정 완료'로 변경
     kw_text = (
         f"• [키워드 추출] 상권 검색량 및 전환율 데이터 기반 핵심 키워드 ({kw_str}) 선정 완료\n"
         f"• [SEO 최적화 세팅] 스마트블록 연관도 강화, 플레이스 대표설명 문구 및 검색 태그 구조화 완료"
@@ -80,10 +79,18 @@ def generate_structured_sections(data_dict):
         f"• [고객 소통] 등록된 리뷰 100% 답글 완료({r_count}건)를 통한 플레이스 최적화 지수(SEO) 상승 반영"
     )
 
+    exp_links = data_dict.get('리뷰링크', [])
+    exp_cnt = len(exp_links)
+    exp_text = (
+        f"• [콘텐츠 배포] 당월 목표 블로그 체험단 및 기자단 원고 총 {exp_cnt}건 배포 완료\n"
+        f"• [노출 타겟팅] 핵심 타겟 키워드 연관 포스팅 집행을 통한 상권 영역 내 매장 브랜드 인지도 극대화"
+    )
+
     return {
         "rank_sec": rank_text,
         "kw_sec": kw_text,
-        "review_sec": review_text
+        "review_sec": review_text,
+        "exp_sec": exp_text
     }
 
 # --- [메인 UI] ---
@@ -127,6 +134,7 @@ with st.form("report_form"):
     custom_rank_sec = st.text_area("1) 플레이스 순위 분석 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
     custom_kw_sec = st.text_area("2) 대표키워드 분석 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
     custom_review_sec = st.text_area("3) 방문자 리뷰/답글 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
+    custom_exp_sec = st.text_area("4) 체험단/기자단 배포 보고 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
 
     submitted = st.form_submit_button("🚀 보고서 생성")
 
@@ -153,6 +161,7 @@ with st.form("report_form"):
             temp_data["rank_sec"] = custom_rank_sec.strip() if custom_rank_sec.strip() else auto_secs["rank_sec"]
             temp_data["kw_sec"] = custom_kw_sec.strip() if custom_kw_sec.strip() else auto_secs["kw_sec"]
             temp_data["review_sec"] = custom_review_sec.strip() if custom_review_sec.strip() else auto_secs["review_sec"]
+            temp_data["exp_sec"] = custom_exp_sec.strip() if custom_exp_sec.strip() else auto_secs["exp_sec"]
 
             st.session_state.report_data.append(temp_data)
             st.success(f"[{store_name}] 보고서가 성공적으로 생성되었습니다!")
@@ -174,7 +183,7 @@ def create_fitted_single_line_image(data):
     except:
         title_font = section_font = kpi_title_font = kpi_val_font = arrow_font = body_font = ImageFont.load_default()
 
-    img = Image.new("RGB", (img_width, 2000), color=(248, 250, 252))
+    img = Image.new("RGB", (img_width, 2500), color=(248, 250, 252))
     draw = ImageDraw.Draw(img)
 
     # 1. 상단 헤더
@@ -197,7 +206,6 @@ def create_fitted_single_line_image(data):
     p_rank = parse_rank_num(data['전월 순위'])
     c_rank = parse_rank_num(data['당월 순위'])
     
-    # 기본값: 유지 (=)
     rank_accent = (59, 130, 246)
     arrow_sym = "="
     arrow_color = (100, 116, 139)
@@ -220,7 +228,7 @@ def create_fitted_single_line_image(data):
             arrow_color = (100, 116, 139)
             status_tag = "유지"
 
-    # KPI 1 (플레이스 순위)
+    # KPI 1
     draw_card(margin, y, margin + card_w, y + 85, accent=rank_accent)
     draw.text((margin + 16, y + 14), f"플레이스 순위 [{status_tag}]", font=kpi_title_font, fill=(100, 116, 139))
     draw.text((margin + 16, y + 40), f"{data['전월 순위']}", font=kpi_val_font, fill=(30, 41, 59))
@@ -272,14 +280,26 @@ def create_fitted_single_line_image(data):
     # [섹션 3] 리뷰 및 답글
     y = render_single_line_section("방문자 리뷰 및 고객 답글 관리 보고", data['review_sec'], y, accent_col=(15, 23, 42))
 
-    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트
+    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트 (보고 내용 + 링크 통합)
     draw.text((margin, y), "체험단 / 기자단 배포 보고 및 리스트", font=section_font, fill=(15, 23, 42))
     y += 32
+    
     links = data['리뷰링크']
-    link_h = max(60, len(links) * 24 + 18 if links else 55)
-    draw_card(margin, y, img_width - margin, y + link_h, accent=(2, 132, 199))
+    exp_lines = [line.strip() for line in data['exp_sec'].split('\n') if line.strip()]
+    
+    lines_count = len(exp_lines)
+    links_count = len(links) if links else 1
+    block_h = max(70, lines_count * 26 + links_count * 24 + 22)
+    
+    draw_card(margin, y, img_width - margin, y + block_h, accent=(2, 132, 199))
 
     ly = y + 14
+    # 1) 보고 내용 렌더링
+    for line in exp_lines:
+        draw.text((margin + 18, ly), line, font=body_font, fill=(30, 41, 59))
+        ly += 26
+        
+    # 2) 링크 리스트 렌더링
     if links:
         for i, link in enumerate(links):
             draw.text((margin + 18, ly), f"{i+1}. {link}", font=body_font, fill=(2, 132, 199))
@@ -287,8 +307,8 @@ def create_fitted_single_line_image(data):
     else:
         draw.text((margin + 18, ly), "등록된 리뷰 링크가 없습니다.", font=body_font, fill=(148, 163, 184))
 
-    # 10번 링크 및 카드 바로 밑에서 여백 없이 바로 크롭
-    final_y = y + link_h + 15
+    # 하단 여백 없이 정밀 자르기
+    final_y = y + block_h + 15
     cropped_img = img.crop((0, 0, img_width, final_y))
 
     buf = BytesIO()
@@ -342,14 +362,14 @@ if st.session_state.report_data:
                 kakao_text += f"🎯 [대표키워드 분석 및 SEO 세팅 보고]\n{data['kw_sec']}\n\n"
                 kakao_text += f"💬 [방문자 리뷰 및 고객 답글 관리 보고]\n{data['review_sec']}\n\n"
                 
+                kakao_text += f"📣 [체험단 / 기자단 배포 보고 및 리스트]\n{data['exp_sec']}\n"
                 if data['리뷰링크']:
-                    kakao_text += "🔗 [체험단 / 기자단 배포 보고 및 리스트]\n"
                     for i, link in enumerate(data['리뷰링크']):
                         kakao_text += f"{i+1}. {link}\n"
                 
                 kakao_text += "\n상세 내용은 첨부해 드린 보고서 이미지를 확인해 주세요. 감사합니다!"
 
-                st.text_area("카톡 전송 문구 전체 복사", value=kakao_text, height=420, key=f"kakao_txt_{idx}")
+                st.text_area("카톡 전송 문구 전체 복사", value=kakao_text, height=450, key=f"kakao_txt_{idx}")
 
             st.markdown("---")
 
