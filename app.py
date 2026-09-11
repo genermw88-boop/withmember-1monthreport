@@ -63,12 +63,13 @@ def generate_structured_sections(data_dict):
                 f"• [확장 플랜] 서브 키워드 순위 동반 상승 및 최상위권 안착을 위한 트래픽 최적화를 진행합니다."
             )
     else:
-        rank_text = f"• [현황 분석] 당월 플레이스 순위: (전월) {data_dict.get('전월 순위', '-')} ➔ (당월) {data_dict.get('당월 순위', '-')}"
+        rank_text = f"• [현황 분석] 당월 플레이스 순위: (전월) {data_dict.get('전월 순위', '-')} = (당월) {data_dict.get('당월 순위', '-')}"
 
     keywords = data_dict.get('대표키워드', [])
     kw_str = ", ".join(keywords) if keywords else "주요 대표키워드"
+    # '도출' -> '선정 완료'로 변경
     kw_text = (
-        f"• [키워드 추출] 상권 검색량 및 전환율 데이터 기반 핵심 키워드 ({kw_str}) 도출\n"
+        f"• [키워드 추출] 상권 검색량 및 전환율 데이터 기반 핵심 키워드 ({kw_str}) 선정 완료\n"
         f"• [SEO 최적화 세팅] 스마트블록 연관도 강화, 플레이스 대표설명 문구 및 검색 태그 구조화 완료"
     )
 
@@ -93,9 +94,9 @@ with st.form("report_form"):
 
     col1, col2 = st.columns(2)
     with col1:
-        store_name = st.text_input("매장명 *", placeholder="예: asd")
+        store_name = st.text_input("매장명 *", placeholder="예: ㅁㄴㅇ")
         prev_rank_input = st.text_input("전월 플레이스 순위", placeholder="예: 11")
-        current_rank_input = st.text_input("당월 플레이스 순위", placeholder="예: 1")
+        current_rank_input = st.text_input("당월 플레이스 순위", placeholder="예: 11")
     with col2:
         visitor_review = st.number_input("이번 달 방문자 리뷰 수", min_value=0, step=1)
         reply_count = st.number_input("답글 수", min_value=0, step=1)
@@ -158,9 +159,8 @@ with st.form("report_form"):
         else:
             st.error("매장명은 필수 입력 사항입니다.")
 
-# --- [한 줄 맞춤 + 하단 여백 완전 삭제 이미지 엔진] ---
+# --- [이미지 생성 엔진] ---
 def create_fitted_single_line_image(data):
-    # 가로 폭을 1200px로 대폭 늘려 모든 문장 줄바꿈 방지
     img_width = 1200
     margin = 40
 
@@ -169,12 +169,11 @@ def create_fitted_single_line_image(data):
         section_font = ImageFont.truetype(font_bold_path, 19)
         kpi_title_font = ImageFont.truetype(font_bold_path, 13)
         kpi_val_font = ImageFont.truetype(font_bold_path, 22)
-        arrow_font = ImageFont.truetype(font_bold_path, 17)
+        arrow_font = ImageFont.truetype(font_bold_path, 18)
         body_font = ImageFont.truetype(font_path, 14)
     except:
         title_font = section_font = kpi_title_font = kpi_val_font = arrow_font = body_font = ImageFont.load_default()
 
-    # 초기에 여유 있게 배경 생성 후 아래에서 딱 맞게 크롭
     img = Image.new("RGB", (img_width, 2000), color=(248, 250, 252))
     draw = ImageDraw.Draw(img)
 
@@ -198,8 +197,9 @@ def create_fitted_single_line_image(data):
     p_rank = parse_rank_num(data['전월 순위'])
     c_rank = parse_rank_num(data['당월 순위'])
     
+    # 기본값: 유지 (=)
     rank_accent = (59, 130, 246)
-    arrow_sym = "➔"
+    arrow_sym = "="
     arrow_color = (100, 116, 139)
     status_tag = "유지"
 
@@ -214,13 +214,18 @@ def create_fitted_single_line_image(data):
             arrow_sym = "▼"
             arrow_color = (225, 29, 72)
             status_tag = "대응"
+        else:
+            rank_accent = (59, 130, 246)
+            arrow_sym = "="
+            arrow_color = (100, 116, 139)
+            status_tag = "유지"
 
-    # KPI 1
+    # KPI 1 (플레이스 순위)
     draw_card(margin, y, margin + card_w, y + 85, accent=rank_accent)
     draw.text((margin + 16, y + 14), f"플레이스 순위 [{status_tag}]", font=kpi_title_font, fill=(100, 116, 139))
     draw.text((margin + 16, y + 40), f"{data['전월 순위']}", font=kpi_val_font, fill=(30, 41, 59))
-    draw.text((margin + 80, y + 42), f"{arrow_sym}", font=arrow_font, fill=arrow_color)
-    draw.text((margin + 110, y + 40), f"{data['당월 순위']}", font=kpi_val_font, fill=rank_accent)
+    draw.text((margin + 82, y + 40), f"{arrow_sym}", font=arrow_font, fill=arrow_color)
+    draw.text((margin + 108, y + 40), f"{data['당월 순위']}", font=kpi_val_font, fill=rank_accent)
 
     # KPI 2
     c2_x = margin + card_w + 12
@@ -236,7 +241,7 @@ def create_fitted_single_line_image(data):
 
     y += 85 + 28
 
-    # 3. 본문 세부 섹션 (한 줄 강제 출력 로직)
+    # 3. 본문 세부 섹션
     def render_single_line_section(title, raw_text, cur_y, accent_col=(15, 23, 42), bg_col=(255, 255, 255), border_col=(226, 232, 240)):
         draw.text((margin, cur_y), title, font=section_font, fill=(15, 23, 42))
         cur_y += 32
@@ -248,7 +253,6 @@ def create_fitted_single_line_image(data):
         
         ly = cur_y + 14
         for line in lines:
-            # 강제로 줄바꿈 없이 한 줄에 렌더링
             draw.text((margin + 18, ly), line, font=body_font, fill=(30, 41, 59))
             ly += 26
             
@@ -258,7 +262,8 @@ def create_fitted_single_line_image(data):
     is_dropped = (p_rank and c_rank and c_rank > p_rank)
     s1_bg = (254, 242, 242) if is_dropped else (255, 255, 255)
     s1_border = (254, 202, 202) if is_dropped else (226, 232, 240)
-    s1_accent = (225, 29, 72) if is_dropped else (16, 185, 129)
+    s1_accent = (225, 29, 72) if is_dropped else (16, 185, 129) if (p_rank and c_rank and c_rank < p_rank) else (59, 130, 246)
+    
     y = render_single_line_section("플레이스 순위 분석 및 대응 방안", data['rank_sec'], y, accent_col=s1_accent, bg_col=s1_bg, border_col=s1_border)
 
     # [섹션 2] 대표키워드 분석
@@ -282,7 +287,7 @@ def create_fitted_single_line_image(data):
     else:
         draw.text((margin + 18, ly), "등록된 리뷰 링크가 없습니다.", font=body_font, fill=(148, 163, 184))
 
-    # ★ 10번 링크 및 상자 바로 밑에서 15px 패딩 후 완전히 자름 (하단 여백 0%)
+    # 10번 링크 및 카드 바로 밑에서 여백 없이 바로 크롭
     final_y = y + link_h + 15
     cropped_img = img.crop((0, 0, img_width, final_y))
 
@@ -317,12 +322,14 @@ if st.session_state.report_data:
                 
                 p_rank = parse_rank_num(data['전월 순위'])
                 c_rank = parse_rank_num(data['당월 순위'])
-                arrow_sym = "➔"
+                arrow_sym = "="
                 if p_rank and c_rank:
                     if c_rank < p_rank:
                         arrow_sym = "▲"
                     elif c_rank > p_rank:
                         arrow_sym = "▼"
+                    else:
+                        arrow_sym = "="
 
                 kakao_text = f"안녕하세요 대표님!\n[{data['매장명']}] 월간 마케팅 보고서 전달드립니다.\n\n"
                 
