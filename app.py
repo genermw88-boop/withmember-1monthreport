@@ -76,7 +76,7 @@ def generate_structured_sections(data_dict):
     else:
         rank_text = f"• [현황 분석] 당월 플레이스 순위: (전월) {data_dict.get('전월 순위', '-')} = (당월) {data_dict.get('당월 순위', '-')}"
 
-    # 2. 대표키워드 분석 (도출 -> 선정 완료)
+    # 2. 대표키워드 분석
     keywords = data_dict.get('대표키워드', [])
     kw_str = ", ".join(keywords) if keywords else "주요 대표키워드"
     kw_text = (
@@ -92,10 +92,21 @@ def generate_structured_sections(data_dict):
         f"• [고객 소통] 등록된 리뷰 100% 답글 완료({r_count}건)를 통한 플레이스 최적화 지수(SEO) 상승 반영"
     )
 
+    # 4. 체험단 / 기자단 배포 보고
+    links = data_dict.get('리뷰링크', [])
+    link_cnt = len(links)
+    exp_templates = [
+        f"• [콘텐츠 배포] 타겟 키워드 관련 블로그/기자단 총 {link_cnt}건 배포 완료로 상권 노출 점유율 확대\n• [트래픽 유도] 매장 대표 키워드 검색 시 포털 상단 노출 및 플레이스 연관 트래픽 유입 가속화",
+        f"• [바이럴 효과] 브랜드 신뢰도 제고를 위해 고품질 리뷰 콘텐츠 {link_cnt}건 집중 세팅 완료\n• [전환율 상승] 실사용 후기 기반의 키워드 마케팅 전개로 잠재 고객 방문 전환 유도",
+        f"• [노출 강화] 스마트블록 및 블로그 탭 상단 노출을 목표로 체험단/기자단 {link_cnt}건 발행 완료\n• [지수 상승] 영수증 리뷰 및 플레이스 태그와 연계한 검색 알고리즘 지수 지속 강화"
+    ]
+    exp_text = random.choice(exp_templates)
+
     return {
         "rank_sec": rank_text,
         "kw_sec": kw_text,
-        "review_sec": review_text
+        "review_sec": review_text,
+        "exp_sec": exp_text
     }
 
 # --- [메인 UI] ---
@@ -123,7 +134,7 @@ with st.form("report_form"):
                 kw = st.text_input(f"키워드 {i+1}", key=f"kw_{i}")
                 keywords.append(kw)
 
-    with st.expander("🔗 체험단 / 기자단 리뷰 링크 (최대 10개)"):
+    with st.expander("🔗 체험단 / 기자단 리뷰 링크 (최대 10개)", expanded=True):
         links = []
         l_cols1, l_cols2 = st.columns(2)
         for i in range(10):
@@ -139,6 +150,7 @@ with st.form("report_form"):
     custom_rank_sec = st.text_area("1) 플레이스 순위 분석 내용", placeholder="비워두시면 유형별로 매번 다른 문구가 자동 적용됩니다.", height=70)
     custom_kw_sec = st.text_area("2) 대표키워드 분석 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
     custom_review_sec = st.text_area("3) 방문자 리뷰/답글 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
+    custom_exp_sec = st.text_area("4) 체험단/기자단 배포 보고 내용", placeholder="비워두시면 자동 생성됩니다.", height=70)
 
     submitted = st.form_submit_button("🚀 보고서 생성")
 
@@ -165,6 +177,7 @@ with st.form("report_form"):
             temp_data["rank_sec"] = custom_rank_sec.strip() if custom_rank_sec.strip() else auto_secs["rank_sec"]
             temp_data["kw_sec"] = custom_kw_sec.strip() if custom_kw_sec.strip() else auto_secs["kw_sec"]
             temp_data["review_sec"] = custom_review_sec.strip() if custom_review_sec.strip() else auto_secs["review_sec"]
+            temp_data["exp_sec"] = custom_exp_sec.strip() if custom_exp_sec.strip() else auto_secs["exp_sec"]
 
             st.session_state.report_data.append(temp_data)
             st.success(f"[{store_name}] 보고서가 성공적으로 생성되었습니다!")
@@ -186,7 +199,7 @@ def create_fitted_single_line_image(data):
     except:
         title_font = section_font = kpi_title_font = kpi_val_font = arrow_font = body_font = ImageFont.load_default()
 
-    img = Image.new("RGB", (img_width, 2000), color=(248, 250, 252))
+    img = Image.new("RGB", (img_width, 2200), color=(248, 250, 252))
     draw = ImageDraw.Draw(img)
 
     # 1. 상단 헤더
@@ -283,14 +296,29 @@ def create_fitted_single_line_image(data):
     # [섹션 3] 리뷰 및 답글
     y = render_single_line_section("방문자 리뷰 및 고객 답글 관리 보고", data['review_sec'], y, accent_col=(15, 23, 42))
 
-    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트
+    # [섹션 4] 체험단 / 기자단 배포 보고 및 리스트 (문구 + 링크 통합)
     draw.text((margin, y), "체험단 / 기자단 배포 보고 및 리스트", font=section_font, fill=(15, 23, 42))
     y += 32
+
+    exp_lines = [line.strip() for line in data['exp_sec'].split('\n') if line.strip()]
     links = data['리뷰링크']
-    link_h = max(60, len(links) * 24 + 18 if links else 55)
-    draw_card(margin, y, img_width - margin, y + link_h, accent=(2, 132, 199))
+    
+    # 카드 전체 높이 계산 (보고 내용 + 링크 리스트)
+    link_section_h = (len(links) * 24) if links else 24
+    card_h = max(70, (len(exp_lines) * 26) + link_section_h + 28)
+
+    draw_card(margin, y, img_width - margin, y + card_h, accent=(2, 132, 199))
 
     ly = y + 14
+    # 보고 내용 출력
+    for line in exp_lines:
+        draw.text((margin + 18, ly), line, font=body_font, fill=(30, 41, 59))
+        ly += 26
+
+    if exp_lines:
+        ly += 6
+
+    # 링크 리스트 출력
     if links:
         for i, link in enumerate(links):
             draw.text((margin + 18, ly), f"{i+1}. {link}", font=body_font, fill=(2, 132, 199))
@@ -298,8 +326,8 @@ def create_fitted_single_line_image(data):
     else:
         draw.text((margin + 18, ly), "등록된 리뷰 링크가 없습니다.", font=body_font, fill=(148, 163, 184))
 
-    # 하단 여백 완전 크롭
-    final_y = y + link_h + 15
+    # 하단 크롭
+    final_y = y + card_h + 20
     cropped_img = img.crop((0, 0, img_width, final_y))
 
     buf = BytesIO()
@@ -346,10 +374,10 @@ if st.session_state.report_data:
                         arrow_sym = "="
                         status_str = "유지"
 
-                # 💡 이미지 본문 반복이 아닌 깔끔한 통합 요약 형식으로 카톡 문구 전면 개편
                 kw_str = ", ".join(data['대표키워드']) if data['대표키워드'] else "주요 키워드"
                 link_count = len(data['리뷰링크'])
 
+                # 카톡 발송 문구
                 kakao_text = (
                     f"안녕하세요 대표님! [{data['매장명']}] 월간 마케팅 통합 보고서 전달드립니다.\n\n"
                     f"📌 [월간 핵심 성과 요약]\n"
@@ -359,12 +387,21 @@ if st.session_state.report_data:
                     f"📌 [주요 마케팅 집행 현황]\n"
                     f"• 플레이스 관리: 당월 순위 분석 및 알고리즘 맞춤 트래픽/SEO 세팅 진행\n"
                     f"• 대표키워드 최적화: ({kw_str}) 상권 분석 기반 핵심 태그 구조화 완료\n"
-                    f"• 블로그/기자단 배포: 당월 총 {link_count}건 콘텐츠 배포 진행 완료\n\n"
-                    f"📄 세부 항목별 상세 리포트 및 리뷰 배포 링크는 함께 첨부해 드린 보고서 이미지를 확인해 주세요!\n"
+                    f"• 체험단/기자단 배포: 당월 총 {link_count}건 콘텐츠 배포 완료\n\n"
+                )
+
+                if data['리뷰링크']:
+                    kakao_text += "🔗 [체험단 / 기자단 배포 링크 리스트]\n"
+                    for i, link in enumerate(data['리뷰링크']):
+                        kakao_text += f"{i+1}. {link}\n"
+                    kakao_text += "\n"
+
+                kakao_text += (
+                    f"📄 상세 항목별 세부 리포트는 함께 첨부해 드린 보고서 이미지를 확인해 주세요!\n"
                     f"궁금하신 사항은 언제든 편하게 말씀해 주세요. 감사합니다. :)"
                 )
 
-                st.text_area("카톡 전송 문구 전체 복사", value=kakao_text, height=420, key=f"kakao_txt_{idx}")
+                st.text_area("카톡 전송 문구 전체 복사", value=kakao_text, height=450, key=f"kakao_txt_{idx}")
 
             st.markdown("---")
 
